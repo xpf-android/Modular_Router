@@ -1,0 +1,66 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion rootProject.ext.androidId.compileSdkVersion
+    buildToolsVersion rootProject.ext.androidId.buildToolsVersion
+
+    defaultConfig {
+        applicationId rootProject.ext.appId.app
+        minSdkVersion rootProject.ext.androidId.minSdkVersion
+        targetSdkVersion rootProject.ext.androidId.targetSdkVersion
+        versionCode rootProject.ext.androidId.versionCode
+        versionName rootProject.ext.androidId.versionName
+
+        testInstrumentationRunner rootProject.ext.androidId.testInstrumentationRunner
+
+        // 这个方法接收三个非空的参数
+        // 第一个参数：确定值的类型
+        // 第二个参数：指定key的名字
+        // 第三个参数：传值(必须是String)
+        // 为什么需要定义这个？因为在src代码中有可能需要跨模块交互，如果是组件化模块(开发环境)相当于两个App交互，显然不行
+        // 切记：不能在android节点下，只能在defaultConfig或buildTypes节点下
+        // rebuild之后，BuildConfig文件中有boolean isRelease 属性了，可以通过它判断环境，进行相关操作
+        buildConfigField("boolean", "isRelease", String.valueOf(isRelease))
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+//            buildConfigField 'boolean', 'isRelease', rootProject.ext.isRelease.toString()
+            buildConfigField 'String', 'release_url', "\"${rootProject.ext.url.release_entrance}\""
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+
+        debug {
+//            buildConfigField 'boolean', 'isRelease', rootProject.ext.isRelease.toString()
+            buildConfigField 'String', 'debug_url', "\"${rootProject.ext.url.debug_entrance}\""
+        }
+    }
+
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation rootProject.ext.app_impl.publicImplementation
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    testImplementation rootProject.ext.app_impl.testImplementation
+    androidTestImplementation rootProject.ext.app_impl.androidTestImplementation
+
+    //dependencies里面的依赖引入方式，好比Map的形式，有key, value，循环遍历引入依赖
+//    dependencies_impl.each {k, v -> implementation v}
+
+
+    //模块之间的依赖方式
+    rootProject.ext.app_impl.other2.each {
+        implementation project(it)
+    }
+
+    annotationProcessor project(':compiler')
+
+    if (rootProject.ext.isRelease) {
+        implementation project(':order')
+        implementation project(':personal')
+    }
+}
